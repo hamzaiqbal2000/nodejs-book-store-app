@@ -4,26 +4,28 @@ const Order = require("../models/order");
 exports.getProducts = (req, res, next) => {
   Product.find()
     .then((products) => {
-      console.log({ products });
+      console.log(products);
       res.render("shop/product-list", {
         prods: products,
         pageTitle: "All Products",
         path: "/products",
+        isAuthenticated: req.LoggedIn,
       });
     })
-    .catch((err) => console.log(err));
+    .catch((err) => {
+      console.log(err);
+    });
 };
 
 exports.getProduct = (req, res, next) => {
   const prodId = req.params.productId;
-  console.log("id " + prodId);
   Product.findById(prodId)
     .then((product) => {
-      console.log("PRODUCT ", JSON.stringify(product));
       res.render("shop/product-detail", {
         product: product,
         pageTitle: product.title,
         path: "/products",
+        isAuthenticated: req.LoggedIn,
       });
     })
     .catch((err) => console.log(err));
@@ -31,38 +33,31 @@ exports.getProduct = (req, res, next) => {
 
 exports.getIndex = (req, res, next) => {
   Product.find()
-    .then((product) => {
+    .then((products) => {
       res.render("shop/index", {
-        prods: product,
+        prods: products,
         pageTitle: "Shop",
         path: "/",
+        isAuthenticated: req.LoggedIn,
       });
     })
-    .catch((err) => console.log(err));
+    .catch((err) => {
+      console.log(err);
+    });
 };
 
 exports.getCart = (req, res, next) => {
   req.user
     .populate("cart.items.productId")
-    // .execPopulate()
+    .execPopulate()
     .then((user) => {
-      console.log(user.cart.items);
       const products = user.cart.items;
       res.render("shop/cart", {
         path: "/cart",
         pageTitle: "Your Cart",
         products: products,
+        isAuthenticated: req.LoggedIn,
       });
-    })
-    .catch((err) => get.log(err));
-};
-
-exports.postCartDeleteProduct = (req, res, next) => {
-  const prodId = req.body.productId;
-  req.user
-    .removeFromCart(prodId)
-    .then(() => {
-      res.redirect("/cart");
     })
     .catch((err) => console.log(err));
 };
@@ -79,9 +74,20 @@ exports.postCart = (req, res, next) => {
     });
 };
 
+exports.postCartDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  req.user
+    .removeFromCart(prodId)
+    .then((result) => {
+      res.redirect("/cart");
+    })
+    .catch((err) => console.log(err));
+};
+
 exports.postOrder = (req, res, next) => {
   req.user
     .populate("cart.items.productId")
+    .execPopulate()
     .then((user) => {
       const products = user.cart.items.map((i) => {
         return { quantity: i.quantity, product: { ...i.productId._doc } };
@@ -111,6 +117,7 @@ exports.getOrders = (req, res, next) => {
         path: "/orders",
         pageTitle: "Your Orders",
         orders: orders,
+        isAuthenticated: req.LoggedIn,
       });
     })
     .catch((err) => console.log(err));
